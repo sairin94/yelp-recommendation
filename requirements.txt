@@ -1,0 +1,13 @@
+pyathena
+SQLAlchemy
+six
+pandas
+numpy
+seaborn
+matplotlib
+scikit-learn
+altair
+xgboost
+Flask
+
+#-e .

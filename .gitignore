@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pyzw
+*.pyproj
+*.egg-info/
+
+# Virtual environment
+venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Other
+.DS_Store
+*.log
+*.gz
+*.tar
+*.zip
+
+# Secret access keys
+access_keys.cfg
