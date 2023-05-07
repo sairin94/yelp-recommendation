@@ -38,6 +38,10 @@ To install the project, follow these steps:
 1. Clone the repository to your local machine.
 2. Navigate to the project directory.
 3. Create and activate a virtual environment for the project (recommended).
+    ```console
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
 4. Install the required Python packages using `pip install -r requirements.txt`.
 5. Install the project as a package using `pip install .`.
 
