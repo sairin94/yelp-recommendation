@@ -9,5 +9,11 @@ scikit-learn
 altair
 xgboost
 Flask
-
+spacy
+scikit-learn
+beautifulsoup4
+gensim==3.8.3
+numpy
+sentence-transformers
+nltk
 #-e .

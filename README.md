@@ -43,7 +43,6 @@ To install the project, follow these steps:
     source venv/bin/activate
     ```
 4. Install the required Python packages using `pip install -r requirements.txt`.
-5. Install the project as a package using `pip install .`.
 
 ## Usage
 
@@ -52,5 +51,5 @@ To use the project, follow these steps:
 1. Ensure that the virtual environment is activated (if you created one).
 2. Import the project package into your Python code using `import <package_name>`.
 3. Use the package functions and classes as desired.
-4. To run the Jupyter Notebook, navigate to `notebooks/` and run `jupyter notebook explore_dataset.ipynb`.
-5. To access AWS server you need to run from root directory `cp access_keys.cfg.template access_keys.cfg` and then populate with your keys
+4. Download yelp academic datasets from https://www.yelp.com/dataset and place those under your notebook folder
+5. Don't need to use athena 
