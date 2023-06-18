@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-image: url("{{ photo_url | safe }}");
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+        #restaurant-info {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 100vh;
+            color: white;
+        }
+        .chart {
+            width: 40%;
+        }
+        h1 {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.7);
+        }
+    </style>
+    <!-- Load Google Charts -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+        // Load the Visualization API and the corechart package.
+        google.charts.load('current', {'packages':['corechart']});
+      
+        // Set a callback to run when the Google Visualization API is loaded.
+        google.charts.setOnLoadCallback(drawChart);
+      
+        function drawChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Review', 'Number', { role: 'style' }],
+                ['Negative', 300, 'red'],
+                ['Neutral', 500, 'blue'],
+                ['Positive', 1200, 'green']
+            ]);
+
+            // Set chart options
+            var options = {
+                title:'Restaurant Review Distribution',
+                width: 500,
+                height: 300,
+                legend: { position: "none" },
+            };
+      
+            var chart = new google.visualization.BarChart(document.getElementById('chart_div'));
+            chart.draw(data, options);
+        }
+    </script>
+    <script type="text/javascript">
+        const API_KEY = 'AIzaSyB2NzwqnLD20WafDa4nEBe4-SnZHjxETbU';
+        const address = '1600 Amphitheatre Parkway, Mountain View, CA'; // replace with your address
+
+        fetch(`https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(address)}&inputtype=textquery&fields=photos&key=${API_KEY}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.candidates && data.candidates.length > 0 && data.candidates[0].photos && data.candidates[0].photos.length > 0) {
+                const photoReference = data.candidates[0].photos[0].photo_reference;
+                
+                // Step 2: Get Photo from Photo Reference
+                const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photoReference}&key=${API_KEY}`;
+                
+                // Use Photo URL as background image
+                document.body.style.backgroundImage = `url('${photoUrl}')`;
+            } else {
+                throw new Error('No photos found');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    </script>
+</head>
+<body>
+    <h1>Restaurant Name</h1>
+    <div id="restaurant-info">
+        <!--Div that will hold the bar chart-->
+        <div id="chart_div" class="chart"></div>
+
+        <!-- Google Maps Embed API -->
+        <div class="chart">
+            <iframe
+                width="600"
+                height="450"
+                style="border:0"
+                loading="lazy"
+                allowfullscreen
+                referrerpolicy="no-referrer-when-downgrade"
+                src="https://www.google.com/maps/embed/v1/place?key=AIzaSyB2NzwqnLD20WafDa4nEBe4-SnZHjxETbU&q=1526%20Packer%20Ave,%20Philadelphia">
+            </iframe>
+        </div>
+        <div>
+            <a href="https://maps.google.com/?q=1526%20Packer%20Ave,%20Philadelphia" target="_blank">View on Google Maps</a>
+        </div>
+    </div>
+</body>
+</html>
