@@ -73,14 +73,11 @@
     <h1 style="font-size: 3em; color: #FFD700;">Discover Restaurant And Food</h1>
     <form id="searchForm" style="display: flex; justify-content: center; align-items: center;" action="/restaurant_details" method="post"  >
       <!-- <select id="yourSelect"  name="myselect" style="width: 60%; padding: 10px; font-size: 1em; margin-right: 10px;"> -->
-      <select name="myselect" id="myselect" onchange="this.form.submit()" style="width: 60%; padding: 10px; font-size: 1em; margin-right: 10px;">
+      <select name="myselect" id="myselect" style="width: 60%; padding: 10px; font-size: 1em; margin-right: 10px;">
         <option value="">Select a restaurant</option>
-        <option value="restaurant1">Restaurant 1</option>
-        <option value="restaurant2">Restaurant 2</option>
-        <option value="restaurant3">Restaurant 3</option>
-        <option value="restaurant4">Restaurant 4</option>
-        <option value="restaurant5">Restaurant 5</option>
-        <option value="restaurant6">Restaurant 6</option>
+        {% for i in range(business_id|length) %}
+        <option value="{{ business_id[i] }}">{{ name[i] }}</option>
+        {% endfor %}
       </select>
       <!-- <input type="hidden" id="hiddenInput" name="allRestaurants" value="" /> -->
       <input type="submit" value="Submit" style="padding: 10px 20px; font-size: 1.2em;" />
