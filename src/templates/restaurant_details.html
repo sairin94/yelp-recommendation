@@ -25,14 +25,15 @@
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript">
         google.charts.load('current', {'packages':['corechart']});
-        google.charts.setOnLoadCallback(drawChart);
+        google.charts.setOnLoadCallback(drawReviewChart);
+        google.charts.setOnLoadCallback(drawMetricsChart);
 
-        function drawChart() {
+        function drawReviewChart() {
             var data = google.visualization.arrayToDataTable([
                 ['Review', 'Number', { role: 'style' }],
-                ['Negative', {{negative_reviews}}, 'red'],
-                ['Neutral', {{neutral_reviews}}, 'blue'],
-                ['Positive', {{positive_reviews}}, 'green']
+                ['Negative', {{sentiment_score[0]}}, 'red'],
+                ['Neutral', {{sentiment_score[1]}}, 'blue'],
+                ['Positive', {{sentiment_score[2]}}, 'green']
             ]);
 
             var options = {
@@ -42,7 +43,36 @@
                 legend: { position: "none" },
             };
 
-            var chart = new google.visualization.BarChart(document.getElementById('chart_div'));
+            var chart = new google.visualization.BarChart(document.getElementById('review_chart_div'));
+            chart.draw(data, options);
+        }
+
+        function drawMetricsChart() {
+            var data = new google.visualization.DataTable();
+            data.addColumn('string', 'Metric');
+            data.addColumn('number', 'Negative');
+            data.addColumn({ role: 'style' });
+            data.addColumn('number', 'Neutral');
+            data.addColumn({ role: 'style' });
+            data.addColumn('number', 'Positive');
+            data.addColumn({ role: 'style' });
+
+            data.addRows([
+                ['food_quality', {{food_quality[0]}}, 'red', 0, 'blue', {{food_quality[2]}}, 'green'],
+                ['price', {{price[0]}}, 'red', 0, 'blue', {{price[2]}}, 'green'],
+                ['ambiance', {{ambiance[0]}}, 'red', 0, 'blue', {{ambiance[2]}}, 'green'],
+                ['service', {{service[0]}}, 'red', 0, 'blue', {{service[2]}}, 'green'],
+                ['comfort', {{comfort[0]}}, 'red', 0, 'blue', {{comfort[2]}}, 'green']
+            ]);
+
+            var options = {
+                title: 'Restaurant Aspect Metrics',
+                width: 800,
+                height: 600,
+                legend: { position: 'none' },
+            };
+
+            var chart = new google.visualization.ColumnChart(document.getElementById('metrics_chart_div'));
             chart.draw(data, options);
         }
     </script>
@@ -59,7 +89,7 @@
                 </div>
                 <div class="col-md-6">
                     <h2>{{name}}</h2>
-                    {% set num_full_stars = average_stars|int %}
+                    {% set num_full_stars = stars|int %}
                     {% set num_empty_stars = 5 - num_full_stars %}
                     
                     {% for _ in range(num_full_stars) %}
@@ -71,10 +101,10 @@
                     {% endfor %}
                 </div>
                 <div class="col-md-1 d-flex align-items-center justify-content-center">
-                    <h1>{{average_stars}}</h1>
+                    <h1>{{stars}}</h1>
                 </div>
                 <div class="col-md-2 d-flex align-items-center justify-content-center">
-                    <h3>{{negative_reviews+positive_reviews+neutral_reviews}} Reviews</h3>
+                    <h3>{{sentiment_score[0] + sentiment_score[1] + sentiment_score[2]}} Reviews</h3>
                 </div>
             </div>
         </div>
@@ -96,9 +126,18 @@
 
             <!-- Google Bar Chart -->
             <div class="col-md-6">
-                <div id="chart_div"></div>
+                <div id="review_chart_div"></div>
             </div>
         </div>
+
+        <div class="row">
+            <!-- Google Map Embed API -->
+            <div class="col-md-12 d-flex justify-content-center align-items-center">
+                <div id="metrics_chart_div"></div>
+            </div>
+
+        </div>
+
     </div>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
 </body>
