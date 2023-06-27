@@ -24,3 +24,12 @@ venv/
 
 # Secret access keys
 access_keys.cfg
+access_keys_shreya.cfg
+
+# ignore pickle files
+*.pkl
+
+# ignore dataset
+notebooks/yelp_dataset/*
+notebooks/checkpoints/*
+
