@@ -20,125 +20,310 @@
             height: 100px;
             width: 100px;
         }
+        .gradient-text {
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .top-buffer { 
+            margin-top:20px; 
+        }
     </style>
     <!-- Load Google Charts -->
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
     <script type="text/javascript">
         google.charts.load('current', {'packages':['corechart']});
         google.charts.setOnLoadCallback(drawReviewChart);
-        google.charts.setOnLoadCallback(drawMetricsChart);
 
         function drawReviewChart() {
             var data = google.visualization.arrayToDataTable([
                 ['Review', 'Number', { role: 'style' }],
-                ['Negative', {{sentiment_score[0]}}, 'red'],
-                ['Neutral', {{sentiment_score[1]}}, 'blue'],
-                ['Positive', {{sentiment_score[2]}}, 'green']
+                ['1', {{ star_counts[1] }}, 'red'],
+                ['2', {{ star_counts[2] }}, 'orange'],
+                ['3', {{ star_counts[3] }}, 'yellow'],
+                ['4', {{ star_counts[4] }}, 'lime'],
+                ['5', {{ star_counts[5] }}, 'green']
             ]);
 
             var options = {
-                title:'Restaurant Review Distribution',
-                width: 500,
-                height: 300,
+                title: 'Review Distribution',
+                width: 540,
+                height: 450,
                 legend: { position: "none" },
+                titleTextStyle: {
+                    fontSize: 20,  // You can set this to whatever size you prefer
+                    bold: true     // Optional, if you want the text to be bold
+                }
             };
 
             var chart = new google.visualization.BarChart(document.getElementById('review_chart_div'));
             chart.draw(data, options);
         }
-
-        function drawMetricsChart() {
-            var data = new google.visualization.DataTable();
-            data.addColumn('string', 'Metric');
-            data.addColumn('number', 'Negative');
-            data.addColumn({ role: 'style' });
-            data.addColumn('number', 'Neutral');
-            data.addColumn({ role: 'style' });
-            data.addColumn('number', 'Positive');
-            data.addColumn({ role: 'style' });
-
-            data.addRows([
-                ['food_quality', {{food_quality[0]}}, 'red', 0, 'blue', {{food_quality[2]}}, 'green'],
-                ['price', {{price[0]}}, 'red', 0, 'blue', {{price[2]}}, 'green'],
-                ['ambiance', {{ambiance[0]}}, 'red', 0, 'blue', {{ambiance[2]}}, 'green'],
-                ['service', {{service[0]}}, 'red', 0, 'blue', {{service[2]}}, 'green'],
-                ['comfort', {{comfort[0]}}, 'red', 0, 'blue', {{comfort[2]}}, 'green']
-            ]);
-
-            var options = {
-                title: 'Restaurant Aspect Metrics',
-                width: 800,
-                height: 600,
-                legend: { position: 'none' },
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const height = 1000;
+            const width = 1000;
+            const radius = Math.min(width, height) / 2;
+            
+            const data = {
+                name: "{{ absa_data.name }}",
+                children: [
+                    {% for child in absa_data.children %}
+                    {
+                        name: "{{ child.name }}",
+                        {% if child.children %}
+                        children: [
+                            {% for grandchild in child.children %}
+                            {
+                                name: "{{ grandchild.name }}",
+                                Positive: {{ grandchild.Positive }},
+                                Negative: {{ grandchild.Negative }},
+                                Neutral: {{ grandchild.Neutral }}
+                            }{% if not loop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                        {% else %}
+                        Positive: {{ child.Positive }},
+                        Negative: {{ child.Negative }},
+                        Neutral: {{ child.Neutral }}
+                        {% endif %}
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ]
             };
 
-            var chart = new google.visualization.ColumnChart(document.getElementById('metrics_chart_div'));
-            chart.draw(data, options);
-        }
+            const svg = d3.select("#sentiment-chart")
+                                                    
+            svg.append('rect')
+                    .attr('width', '120%')
+                    .attr('height', '120%')
+                    .attr('fill', 'white');
+
+            svg.append("text")
+                    .attr("x", width / 2)
+                    .attr("y", 50)
+                    .attr("text-anchor", "middle")  // This centers the text horizontally
+                    .style("font-size", "24px")     // You can adjust the font size as needed
+                    .style("font-weight", "bold")
+                    .text("Aspect-Sentiment Analysis");
+
+            const defs = svg.append("defs");
+            const gradient = defs.append("linearGradient")
+                .attr("id", "sentimentGradient")
+                .attr("x1", "0%")
+                .attr("y1", "100%")
+                .attr("x2", "0%")
+                .attr("y2", "0%");
+            gradient.append("stop")
+                .attr("offset", "0%")
+                .attr("stop-color", d3.interpolateRdYlGn(0));
+            gradient.append("stop")
+                .attr("offset", "50%")
+                .attr("stop-color", d3.interpolateRdYlGn(0.5));
+            gradient.append("stop")
+                .attr("offset", "100%")
+                .attr("stop-color", d3.interpolateRdYlGn(1));
+
+            const partition = data => {
+                const root = d3.hierarchy(data)
+                    .sum(d => d.Positive ? (d.Positive + d.Negative + d.Neutral) : 0)
+                    .sort((a, b) => b.value - a.value);
+                return d3.partition()
+                    .size([2 * Math.PI, radius])
+                    (root);
+            };
+
+            const root = partition(data);
+            root.each(d => d.current = d);
+
+            const getCount = (d) => {
+                let positive = d.data.Positive;
+                let negative = d.data.Negative;
+                let neutral = d.data.Neutral;
+
+                if (!positive && !negative && !neutral) {  // if the node doesn't have these properties
+                    positive = d3.sum(d.children, c => c.data.Positive);
+                    negative = d3.sum(d.children, c => c.data.Negative);
+                    neutral = d3.sum(d.children, c => c.data.Neutral);
+                }
+                
+                return {
+                    positive: positive,
+                    negative: negative,
+                    neutral: neutral
+                };
+            }
+
+            const getColor = (d) => {
+                result = getCount(d);
+                let positive = result.positive;
+                let negative = result.negative;
+                let neutral = result.neutral;
+
+                const total = positive + negative + neutral;
+
+                if (total === 0) return "#ccc";  // default color if no data
+                const positiveRatio = positive / total;
+                const negativeRatio = negative / total;
+                return d3.interpolateRdYlGn(positiveRatio - negativeRatio + 0.5);
+            };
+
+            const arc = d3.arc()
+                .startAngle(d => d.x0)
+                .endAngle(d => d.x1)
+                .padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.005))
+                .padRadius(radius / 2)
+                .innerRadius(d => d.y0)
+                .outerRadius(d => d.y1 - 1);
+
+            const arcs = svg.append("g")
+                .attr("transform", `translate(${width / 2.2},${height / 1.8}) scale(0.8)`)
+                .selectAll("path")
+                .data(root.descendants().slice(1))
+                .join("path")
+                .attr("fill", getColor)
+                .attr("d", arc);
+
+            arcs.append("title")
+                .text(d => `${d.data.name}\n    Positive: ${getCount(d).positive}\n    Negative: ${getCount(d).negative}\n    Neutral: ${getCount(d).neutral}`);
+
+            const labels = svg.append("g")
+                .attr("transform", `translate(${width / 2.2},${height / 1.8}) scale(0.8)`)
+                .selectAll("text")
+                .data(root.descendants().slice(1))
+                .join("text")
+                .attr("transform", function (d) {
+                    const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
+                    const y = (d.y0 + d.y1) / 2;
+                    return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
+                })
+                .attr("dy", "0.50em")
+                .style("fill", "black")
+                .style("font-weight", "bold")
+                .attr("font-size", d => (d.y1 - d.y0) > 20 ? '16px' : '22px')
+                .attr("opacity", d => (d.y1 - d.y0) > 12 ? 1 : 0)
+                .each(function(d) {
+                    const text = d3.select(this);
+                    const words = d.data.name.split(/\s+/);
+                    const lineHeight = 0.5; // in em
+                    let line = [];
+                    let tspan = text.append("tspan").attr("x", -0.5).attr("y", -0.5);
+                    
+                    words.forEach((word, i) => {
+                        line.push(word);
+                        tspan.text(line.join(' '));
+
+                        if (text.node().getComputedTextLength() > (d.y1 - d.y0)) {
+                            line.pop();
+                            tspan.text(line.join(' '));
+                            line = [word];
+                            tspan = text.append("tspan").attr("x", 0).attr("dy", `${lineHeight}em`).text(word);
+                        }
+                    });
+                });
+
+            // Sentiment scale color bar:
+            const gradientHeight = 300;
+            const gradientWidth = 20;
+            const gradientMargin = 75;
+
+            svg.append("rect")
+                .attr("x", width - gradientWidth - gradientMargin)
+                .attr("y", (height - gradientHeight) / 2)
+                .attr("width", gradientWidth)
+                .attr("height", gradientHeight)
+                .style("fill", "url(#sentimentGradient)");
+
+            // Add text labels for the scale
+            svg.append("text")
+                .attr("class", "gradient-text")
+                .attr("x", 25 + width - gradientWidth - gradientMargin)
+                .attr("y", (height - gradientHeight) / 2 + 10)
+                .text("Positive");
+
+            svg.append("text")
+                .attr("class", "gradient-text")
+                .attr("x", 25 + width - gradientWidth - gradientMargin)
+                .attr("y", height / 2)
+                .text("Neutral");
+
+            svg.append("text")
+                .attr("class", "gradient-text")
+                .attr("x", 25 + width - gradientWidth - gradientMargin)
+                .attr("y", (height + gradientHeight) / 2 - 5)
+                .text("Negative");
+        });
     </script>
 </head>
 <body>
-    <div class="header">
+    <body>
+        <div class="header">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-3">
+                        <img src="{{ url_for('static', filename='images/image-1.jpeg') }}" class="img-thumbnail">
+                        <img src="{{ url_for('static', filename='images/image-2.jpeg') }}" class="img-thumbnail">
+                        <img src="{{ url_for('static', filename='images/image-3.jpeg') }}" class="img-thumbnail">
+                        <img src="{{ url_for('static', filename='images/image-4.jpeg') }}" class="img-thumbnail">
+                    </div>
+                    <div class="col-md-6">
+                        <h2>{{name}}</h2>
+                        {% set num_full_stars = stars|int %}
+                        {% set num_empty_stars = 5 - num_full_stars %}
+                        
+                        {% for _ in range(num_full_stars) %}
+                            <img src="{{ url_for('static', filename='images/stars/full_star_icon.png') }}">
+                        {% endfor %}
+                        
+                        {% for _ in range(num_empty_stars) %}
+                            <img src="{{ url_for('static', filename='images/stars/empty_star_icon.png') }}">
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                        <h1>{{stars}}</h1>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-center justify-content-center">
+                        <h3>{{total_num_reviews}} Reviews</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="container">
             <div class="row">
-                <div class="col-md-3">
-                    <img src="{{ url_for('static', filename='images/image-1.jpeg') }}" class="img-thumbnail">
-                    <img src="{{ url_for('static', filename='images/image-2.jpeg') }}" class="img-thumbnail">
-                    <img src="{{ url_for('static', filename='images/image-3.jpeg') }}" class="img-thumbnail">
-                    <img src="{{ url_for('static', filename='images/image-4.jpeg') }}" class="img-thumbnail">
-                </div>
+                <!-- Google Map Embed API -->
                 <div class="col-md-6">
-                    <h2>{{name}}</h2>
-                    {% set num_full_stars = stars|int %}
-                    {% set num_empty_stars = 5 - num_full_stars %}
-                    
-                    {% for _ in range(num_full_stars) %}
-                        <img src="{{ url_for('static', filename='images/stars/full_star_icon.png') }}">
-                    {% endfor %}
-                    
-                    {% for _ in range(num_empty_stars) %}
-                        <img src="{{ url_for('static', filename='images/stars/empty_star_icon.png') }}">
-                    {% endfor %}
+                    <iframe
+                        width="100%"
+                        height="450"
+                        style="border:0"
+                        loading="lazy"
+                        allowfullscreen
+                        src="https://www.google.com/maps/embed/v1/place?key=AIzaSyB2NzwqnLD20WafDa4nEBe4-SnZHjxETbU&q={{full_address}}">
+                    </iframe>
+                    <a href="https://maps.google.com/?q={{full_address}}" target="_blank">View on Google Maps</a>
                 </div>
-                <div class="col-md-1 d-flex align-items-center justify-content-center">
-                    <h1>{{stars}}</h1>
-                </div>
-                <div class="col-md-2 d-flex align-items-center justify-content-center">
-                    <h3>{{sentiment_score[0] + sentiment_score[1] + sentiment_score[2]}} Reviews</h3>
+        
+                <!-- Google Bar Chart -->
+                <div class="col-md-6">
+                    <div id="review_chart_div"></div>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="container">
-        <div class="row">
-            <!-- Google Map Embed API -->
-            <div class="col-md-6">
-                <iframe
-                    width="100%"
-                    height="450"
-                    style="border:0"
-                    loading="lazy"
-                    allowfullscreen
-                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyB2NzwqnLD20WafDa4nEBe4-SnZHjxETbU&q={{full_address}}">
-                </iframe>
-                <a href="https://maps.google.com/?q={{full_address}}" target="_blank">View on Google Maps</a>
+            <div class="row">
+                <div class="col-md-12 d-flex justify-content-center align-items-center">
+                    <svg width="1000" height="1000" id="sentiment-chart"></svg>
+                </div>
             </div>
-
-            <!-- Google Bar Chart -->
-            <div class="col-md-6">
-                <div id="review_chart_div"></div>
+        
+            <div class="row top-buffer">
+                <div class="col-md-12 d-flex justify-content-center align-items-center">
+                    <img width="1000" height="800" src="data:image/png;base64,{{ wordcloud_image }}" alt="Word Cloud">
+                </div>
             </div>
-        </div>
-
-        <div class="row">
-            <!-- Google Map Embed API -->
-            <div class="col-md-12 d-flex justify-content-center align-items-center">
-                <div id="metrics_chart_div"></div>
-            </div>
-
-        </div>
-
-    </div>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+        </div> <!--End of first container-->
+        
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    </body>
 </body>
 </html>

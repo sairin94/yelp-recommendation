@@ -1,88 +1,186 @@
+
+
 <!DOCTYPE html>
 <html>
-
 <head>
-  <meta charset="utf-8">
-  <title>Restaurant Recommendation</title>
-  <style>
-    body {
-      background-image: url('https://st3.depositphotos.com/1400069/37648/i/600/depositphotos_376481338-stock-photo-abstract-blurred-background-street-cafe.jpg');
-      background-size: cover;
-      background-position: center;
-      margin: 0;
-      padding: 0;
-      color: #FFFFFF;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      justify-content: flex-start;
-    }
-
-    .navbar {
-      display: flex;
-      justify-content: space-between;
-      background-color: #333;
-      padding: 10px 20px;
-      color: #fff;
-    }
-
-    .navbar .logo {
-      font-size: 2em;
-    }
-
-    .navbar ul {
-      display: flex;
-      list-style-type: none;
-    }
-
-    .navbar ul li {
-      margin-left: 20px;
-    }
-
-    .navbar ul li a {
-      color: #fff;
-      text-decoration: none;
-    }
-
-    .navbar ul li a:hover {
-      color: #ffd700;
-    }
-
-    #content {
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 20px;
-      text-align: center;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-radius: 10px;
-    }
-  </style>
+    <title>Google Map of Philadelphia</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        /* Always set the map height explicitly to define the size of the div
+         * element that contains the map. */
+        #map {
+            height: 100%;
+        }
+        /* Optional: Makes the sample page fill the window. */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #cuisine-select-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10; /* Make sure the dropdown appears above the map */
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0, 0.3, 0, 0.3);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        #cuisine-select {
+            width: 600px; /* Further increase the width of the dropdown */
+            height: 50px; /* Further increase the height of the dropdown */
+            font-size: 15px; /* Increase the font size in the dropdown */
+            text-align: center; 
+            font-family: Arial; 
+        }
+    </style>
 </head>
-
 <body>
-  <div class="navbar">
-    <div class="logo">Restaurant Radar</div>
-    <ul>
-      <li><a href="#">Home</a></li>
-      <li><a href="#">Contact</a></li>
-      <li><a href="#">About us</a></li>
-    </ul>
-  </div>
-  <div id="content">
-    <h1 style="font-size: 3em; color: #FFD700;">Discover Restaurant And Food</h1>
-    <form id="searchForm" style="display: flex; justify-content: center; align-items: center;" action="/restaurant_details" method="post"  >
-      <!-- <select id="yourSelect"  name="myselect" style="width: 60%; padding: 10px; font-size: 1em; margin-right: 10px;"> -->
-      <select name="myselect" id="myselect" style="width: 60%; padding: 10px; font-size: 1em; margin-right: 10px;">
-        <option value="">Select a restaurant</option>
-        {% for i in range(business_id|length) %}
-        <option value="{{ business_id[i] }}">{{ name[i] }}</option>
-        {% endfor %}
-      </select>
-      <!-- <input type="hidden" id="hiddenInput" name="allRestaurants" value="" /> -->
-      <input type="submit" value="Submit" style="padding: 10px 20px; font-size: 1.2em;" />
-    </form>
-  </div>
-</body>
+    <div id="cuisine-select-container">
+        <label for="cuisine-select">Select your cuisine type:</label>
+        <select id="cuisine-select">
+            <option value="american">American</option>
+            <option value="italian">Italian</option>
+            <option value="mexican">Mexican</option>
+            <option value="european">European</option>
+            <option value="indian">Indian</option>
+            <option value="thai">Thai</option>
+            <option value="chinese">Chinese</option>
+            <option value="korean">Korean</option>
+            <option value="wine-spirit">Wine &amp; Spirit</option>
+        </select>
+    </div>
+    <div id="map"></div>
+    <script>
+        let map;
+        let markers = [];
 
+        $('#cuisine-select').on('change', function() {
+    // Call getRestaurants with the selected cuisine and current map boundary
+            updateRestaurants();
+        });
+        
+        function getBoundary(){
+            let bounds = map.getBounds();
+            return {
+                north: bounds.getNorthEast().lat(),
+                south: bounds.getSouthWest().lat(),
+                east: bounds.getNorthEast().lng(),
+                west: bounds.getSouthWest().lng()
+            };
+        }
+
+        function updateRestaurants() {
+    // Check if the map has been initialized
+            if (map) {
+                let cuisine = $('#cuisine-select').val();
+                let boundary = getBoundary();
+                getRestaurants(cuisine, boundary);
+            }
+        }
+
+
+        function getRestaurants(cuisine,boundary) {
+            // Send AJAX request to the Flask server
+            console.log("called on resize ", boundary);
+            $.ajax({
+                url: '/getRestaurants',
+                method: 'POST',
+                contentType: 'application/json',
+                // data: JSON.stringify(boundary),
+                data: JSON.stringify({ cuisine: cuisine, boundary: boundary }),
+                success: function(data) {
+                        // Clear old markers
+                        for (let i = 0; i < markers.length; i++) {
+                            markers[i].setMap(null);
+                        }
+                        // Clear the markers array
+                        markers = [];
+
+                        // Create a marker for each restaurant
+                        for (let i = 0; i < data.length; i++) {
+                            let restaurant = data[i];
+                            let marker = new google.maps.Marker({
+                                position: restaurant.position,
+                                map: map,
+                                title: restaurant.name
+                            });
+
+                            // Add the marker to the array
+                            markers.push(marker);
+
+                            // Create a form to submit the restaurant details when the "Go" button is clicked
+                            let infoContent = `
+                                <p>${restaurant.name}</p>
+                                <form action="/restaurant_detail" method="post">
+                                    <input type="hidden" name="restaurant_id" value="${restaurant.id}">
+                                    <input type="hidden" name="restaurant_name" value="${restaurant.name}">
+                                    <input type="submit" value="Go">
+                                </form>
+                            `;
+
+                            // Add an info window that opens when you click on the restaurant
+                            let infoWindow = new google.maps.InfoWindow({
+                                // content: '<p>' + restaurant.name + '</p>'
+                                // content: '<p>' + restaurant.name + '</p><button onclick="clickMe(\'' + restaurant.name + '\')">Go</button>'
+                                content: infoContent
+               
+                            });
+
+                            marker.addListener('click', function() {
+                                infoWindow.open(map, marker);
+                            });
+                        }
+                    }
+                });
+            }
+
+        // function clickMe(restaurantName) {
+        //             // This function will be executed when the "Go" button is clicked.
+        //             alert('Go button clicked for restaurant: ' + restaurantName);
+        //         }
+        
+
+        function initMap() {
+            // Create the map centered on Philadelphia
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: 39.9526, lng: -75.1652},
+                zoom: 16
+            });
+
+            // Update restaurants when the map becomes idle
+            google.maps.event.addListenerOnce(map, 'idle', function(){
+                updateRestaurants();
+            });
+            
+            map.addListener('bounds_changed', function() {
+                // This event listener will be called many times during panning/zooming
+                // We throttle it using setTimeout
+                if (this.gettingRestaurants) {
+                    clearTimeout(this.gettingRestaurants);
+                }
+
+                this.gettingRestaurants = setTimeout(() => {
+                    updateRestaurants();
+                }, 500);  // Adjust this delay as needed
+        });
+        }
+
+      
+ 
+
+
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB2NzwqnLD20WafDa4nEBe4-SnZHjxETbU&callback=initMap" async defer></script>
+</body>
 </html>
