@@ -52,4 +52,7 @@ To use the project, follow these steps:
 2. Import the project package into your Python code using `import <package_name>`.
 3. Use the package functions and classes as desired.
 4. Download yelp academic datasets from https://www.yelp.com/dataset and place those under your notebook folder
-5. Don't need to use athena 
+5. Don't need to use athena
+
+## Live Demo
+Check out the live demo of this project [here](http://yelp-analysis.com).
